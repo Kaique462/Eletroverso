@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ELETROVERSE — Mundo da Eletroquímica</title>
+<style>
+:root{--cyan:#7de8df;--blue:#318e9c;--violet:#8c9fb4;--lime:#9cf2b2;--gold:#ffd36b;--glass:rgba(5,14,29,.82)}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071b20;color:#effaff;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}canvas{display:block}
+#game{position:fixed;inset:0}#ui{position:fixed;inset:0;pointer-events:none}
+.panel{background:var(--glass);border:1px solid #75eaff55;box-shadow:0 8px 35px #00111f80,inset 0 0 25px #37cfff0b;backdrop-filter:blur(12px);border-radius:14px}
+#top{position:absolute;top:14px;left:16px;right:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+#logo{padding:10px 15px;min-width:190px}#logo b{letter-spacing:2px;color:var(--cyan);font-size:15px}#logo small{display:block;color:#a6c5d8;font-size:10px;letter-spacing:1px;margin-top:3px}
+#stats{display:flex;gap:15px;padding:10px 14px;font-size:12px;align-items:center}#stats strong{color:var(--lime);font-size:14px}
+#mission{position:absolute;top:85px;left:16px;width:245px;padding:12px 14px}#mission .eyebrow{font-size:9px;letter-spacing:1.5px;color:var(--cyan)}#mission b{display:block;font-size:13px;margin:5px 0}#mission p{font-size:11px;line-height:1.45;color:#bfd4e1;margin:0}
+#progress{height:5px;background:#1b3448;border-radius:9px;margin-top:10px;overflow:hidden}#progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:width .4s}
+#cross{position:absolute;left:50%;top:50%;width:9px;height:9px;border:1px solid #e9fcff;border-radius:50%;transform:translate(-50%,-50%);opacity:.65}\n#lookHint{display:none;position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:6px 10px;border-radius:20px;background:#06172b99;color:#c9e8f3;font-size:9px;letter-spacing:.7px;white-space:nowrap;pointer-events:none}
+#interact{position:absolute;left:50%;top:66%;transform:translateX(-50%);padding:10px 16px;font-size:12px;display:none}
+#interact kbd{background:#eafaff;color:#071321;border-radius:5px;padding:3px 6px;font-weight:900;margin-right:7px}
+#bottom{position:absolute;bottom:13px;left:50%;transform:translateX(-50%);padding:8px 13px;font-size:10px;color:#b8d1e0;white-space:nowrap}
+#bottom b{color:#fff}
+#rightTools{position:absolute;right:16px;top:85px;display:grid;gap:8px;pointer-events:auto}
+.tool{width:42px;height:42px;border-radius:12px;color:#dffaff;background:#06172be8;border:1px solid #69e8ff66;cursor:pointer;font-size:17px}
+#map{position:absolute;right:16px;bottom:60px;width:142px;height:142px;padding:7px}
+#map canvas{width:126px;height:126px;border-radius:8px}
+#toast{position:absolute;left:50%;top:18%;transform:translateX(-50%);padding:10px 18px;color:#eaffff;font-size:12px;opacity:0;transition:opacity .3s}
+.overlay{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(ellipse at 50% 35%,#174d4cdd,#061316f7 74%);backdrop-filter:blur(8px)}
+.dialog{width:min(680px,96vw);max-height:90vh;overflow:auto;padding:27px;border-radius:22px;background:linear-gradient(145deg,#102d48f5,#071426f7);border:1px solid #65eaff70;box-shadow:0 20px 90px #000a}
+.kicker{display:inline-block;padding:5px 10px;border-radius:30px;background:#0b4158;color:#9ff4ff;font-size:10px;letter-spacing:1px;margin-bottom:13px}
+h1{font-size:clamp(32px,6vw,58px);line-height:.98;margin:0 0 12px;letter-spacing:-1.5px}h1 span{color:var(--cyan);text-shadow:0 0 25px #4deaff55}
+h2{font-size:23px;margin:0 0 12px}.copy{color:#bed3e0;font-size:14px;line-height:1.65}
+button{border:0;border-radius:11px;padding:12px 17px;background:linear-gradient(100deg,#4ce2ef,#9582ff);color:#061321;font-weight:850;cursor:pointer;margin:5px 6px 0 0;transition:transform .15s,filter .15s}
+button:hover{transform:translateY(-2px);filter:brightness(1.12)}button:disabled{opacity:.5;cursor:default;transform:none}
+button.secondary{background:#19364f;color:#e6f8ff;border:1px solid #5b829d}
+#quizOverlay,#codexOverlay,#pauseOverlay,#finishOverlay{display:none}
+#quizDialog{max-width:600px}.qmeta{color:var(--cyan);font-size:10px;letter-spacing:1.3px;margin-bottom:8px}.qtext{font-size:21px;font-weight:800;line-height:1.35;margin:7px 0 18px}
+#choices{display:grid;gap:9px}#choices button{margin:0;text-align:left;background:#142f49;border:1px solid #426987;color:#effaff;font-weight:650}#choices button:hover{border-color:var(--cyan);background:#1a4662}
+#explain{min-height:45px;color:var(--lime);font-size:13px;line-height:1.5;margin-top:12px}
+#codexContent{display:grid;gap:10px}.codexItem{padding:12px;background:#0b2035;border:1px solid #31546d;border-radius:12px}.codexItem b{color:var(--cyan)}.codexItem p{font-size:12px;color:#c4d9e5;line-height:1.5;margin:5px 0 0}
+#touch{display:none;position:absolute;left:18px;bottom:75px;pointer-events:auto;gap:6px}#touch button{width:44px;height:44px;padding:0;margin:0;background:#06172bc9;border:1px solid #7cecff66;color:white}
+#touch .cluster{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,44px);gap:5px}#touch .up{grid-column:2}#touch .left{grid-column:1;grid-row:2}#touch .down{grid-column:2;grid-row:2}#touch .right{grid-column:3;grid-row:2}
+#touchAct{position:absolute;right:22px;bottom:88px;width:64px;height:64px;border-radius:50%;pointer-events:auto;background:#0c5369e8;color:white;border:1px solid #9cf6ff;font-weight:900}#touchAct small{font-size:9px;letter-spacing:.7px}
+@media(max-width:700px){#mission{top:72px;left:8px;width:190px;padding:9px}#mission p{font-size:10px}#top{top:8px;left:8px;right:8px}#logo{min-width:0;padding:8px}#logo b{font-size:12px}#stats{gap:7px;padding:8px;font-size:10px}#stats span:nth-child(3){display:none}#rightTools{top:70px;right:8px}#map{display:none}#bottom{display:none}#touch{display:block}#interact{top:57%;font-size:11px}.dialog{padding:21px}}
+
+/* Controles táteis e layout adaptável: celular vertical, horizontal e computador */
+html,body,#game{height:100%;height:100dvh}
+#game, #game canvas{touch-action:none;-webkit-user-select:none;user-select:none}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+/* Evita seleção de texto, menu de copiar/colar e destaque ao pressionar os controles no celular */
+html,body,#game,#touch,#touch *,#touchAct,button{
+  -webkit-user-select:none !important;
+  user-select:none !important;
+  -webkit-touch-callout:none !important;
+  -webkit-tap-highlight-color:transparent;
+}
+#touch button,#touchAct{touch-action:none !important; -webkit-user-select:none !important; user-select:none !important;}
+
+.overlay{padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+.dialog{max-height: min(90vh,90dvh);overscroll-behavior:contain}
+#touch{z-index:4;bottom:calc(18px + env(safe-area-inset-bottom));left:calc(14px + env(safe-area-inset-left));}
+#touch button{width:clamp(42px,6.5vh,54px);height:clamp(42px,6.5vh,54px);font-size:18px;touch-action:none}
+#touch .cluster{grid-template-columns:repeat(3,clamp(42px,6.5vh,54px));grid-template-rows:repeat(2,clamp(42px,6.5vh,54px));gap:5px}
+#touchAct{z-index:4;right:calc(18px + env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));width:clamp(62px,9vh,76px);height:clamp(62px,9vh,76px);touch-action:none}
+@media (pointer:coarse), (max-width:760px){
+ #touch{display:none}
+ #touchAct{display:none}
+ #map{display:none}
+ #bottom{display:none}
+ #mission{top:calc(76px + env(safe-area-inset-top));left:10px;width:min(48vw,230px)}
+ #rightTools{top:calc(76px + env(safe-area-inset-top));right:10px}
+ #interact{top:58%;max-width:80vw;text-align:center}
+ .dialog{width:min(680px,96vw);padding:clamp(15px,3vw,24px)}
+}
+@media (orientation:portrait) and (max-width:760px){
+  #mission p{font-size:12px;line-height:1.45}
+  #mission b{font-size:13px}
+  #mission{width:min(62vw,245px);padding:10px 12px}
+  #mission .eyebrow{font-size:10px}
+  #stats{font-size:11px}
+  #stats strong{font-size:13px}
+  #interact{font-size:12px}
+  #choices button{font-size:16px;line-height:1.4;padding:14px}
+  #explain{font-size:15px;line-height:1.6}
+  .copy{font-size:15px;line-height:1.6}
+  .codexItem p{font-size:14px;line-height:1.55}
+  #mission .eyebrow{font-size:9px}
+  #stats{font-size:10px}
+  #stats strong{font-size:12px}
+  #interact{font-size:11px}
+  .tool{font-size:17px}
+  .qtext{font-size:20px;line-height:1.4}
+  #choices button{font-size:15px;line-height:1.35;padding:13px}
+  #explain{font-size:14px;line-height:1.55}
+  .copy{font-size:14px;line-height:1.55}
+  .codexItem p{font-size:13px;line-height:1.5}
+
+ #top{top:calc(7px + env(safe-area-inset-top));left:8px;right:8px;gap:6px;align-items:flex-start}
+ #logo{min-width:0;padding:7px 9px}
+ #logo b{font-size:11px;letter-spacing:1px}
+ #logo small{font-size:8px;letter-spacing:.5px}
+ #stats{gap:6px;padding:7px 8px;font-size:9px}
+ #stats strong{font-size:11px}
+ #mission{top:calc(64px + env(safe-area-inset-top));width:min(58vw,225px);padding:8px 10px}
+ #mission .eyebrow{font-size:8px}
+ #mission b{font-size:11px}
+ #mission p{font-size:9px;line-height:1.3}
+ #progress{margin-top:6px}
+ #rightTools{top:calc(64px + env(safe-area-inset-top));right:8px;gap:6px}
+ .tool{width:36px;height:36px;border-radius:10px;font-size:15px}
+ #touch{bottom:calc(12px + env(safe-area-inset-bottom));left:calc(9px + env(safe-area-inset-left))}
+ #touchAct{right:calc(12px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom))}
+ #interact{top:55%;font-size:10px;padding:8px 11px}
+ .qtext{font-size:18px}
+}
+@media (orientation:landscape) and (max-height:600px){
+  #mission p{font-size:10px;line-height:1.35}
+  #mission b{font-size:12px}
+  #stats{font-size:10px}
+  .qtext{font-size:19px}
+  #choices button{font-size:14px;padding:10px}
+  #explain{font-size:13px}
+
+ #top{top:5px;left:8px;right:8px}
+ #logo{padding:5px 9px}
+ #logo b{font-size:11px}
+ #logo small{font-size:8px}
+ #stats{padding:5px 8px;font-size:9px}
+ #mission{top:53px;left:8px;width:165px;padding:7px 9px}
+ #mission p{font-size:9px;line-height:1.25}
+ #rightTools{top:53px;right:8px;gap:5px}
+ .tool{width:34px;height:34px}
+ #touch{left:calc(10px + env(safe-area-inset-left));bottom:calc(8px + env(safe-area-inset-bottom))}
+ #touchAct{right:calc(12px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom))}
+ #interact{top:61%;font-size:10px}
+ .dialog{max-height:84dvh;padding:13px 18px}
+ h2{font-size:19px;margin-bottom:7px}
+ .copy{font-size:12px;line-height:1.4}
+ .codexItem{padding:8px}
+ .codexItem p{font-size:10px}
+}
+@media (min-width:761px) and (pointer:fine){
+ #touch,#touchAct{display:none!important}
+}
+
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="ui">
+ <div id="top">
+  <div id="logo" class="panel"><b>⚡ ELETROVERSE</b><small>MUNDO 3D DA ELETROQUÍMICA</small></div>
+  <div id="stats" class="panel"><span>⭐ <strong id="points">0</strong> pontos</span><span>🧪 <strong id="stations">0/4</strong> etapas</span></div>
+ </div>
+ <div id="mission" class="panel"><div class="eyebrow">OBJETIVO</div><b id="missionTitle">Explore o laboratório</b><p id="missionText">Complete as quatro estações de eletroquímica.</p><div id="progress"><span id="progressFill"></span></div></div>
+ <div id="cross"></div><div id="lookHint">DESLIZE PARA OS LADOS PARA GIRAR A CÂMERA</div><div id="interact" class="panel"><kbd>E</kbd><span id="interactText">INTERAGIR</span></div>
+ <div id="rightTools"><button class="tool" id="pauseBtn" title="Pausar">Ⅱ</button></div><span id="charge" style="display:none">100%</span><canvas id="mapCanvas" width="252" height="252" style="display:none"></canvas>
+ 
+ <div id="toast" class="panel"></div>
+ <div id="bottom" class="panel"><b>WASD / SETAS</b> mover · <b>MOUSE</b> olhar · <b>E</b> interagir</div>
+ <div id="touch"><div class="cluster"><button class="up" data-key="w">▲</button><button class="left" data-key="a">◀</button><button class="down" data-key="s">▼</button><button class="right" data-key="d">▶</button></div></div>
+ <button id="touchAct" style="display:none">E<br><small>USAR</small></button>
+</div>
+
+<div id="intro" class="overlay"><div class="dialog" style="max-width:520px;text-align:center">
+ <div class="kicker">JOGO EDUCATIVO 3D • ELETROQUÍMICA</div>
+ <h1>ELETRO<span>VERSE</span></h1>
+ <p class="copy">Explore um laboratório 3D e complete quatro desafios sobre eletroquímica.</p>
+ <button id="play">VER REGRAS</button>
+ <p class="copy" style="font-size:11px;margin-bottom:0">Compatível com celular e computador. Requer internet para carregar o ambiente 3D.</p>
+ </div></div>
+
+<div id="rulesOverlay" class="overlay" style="display:none"><div class="dialog" style="max-width:520px">
+ <div class="kicker">ANTES DE COMEÇAR</div>
+ <h2>Regras do jogo</h2>
+ <div class="codexItem"><b>Objetivo</b><p>Explore o mundo químico, investigue os fenômenos eletroquímicos e conclua os quatro desafios. A grande missão é compreender e ativar a câmara de eletrólise, que fica no centro da área de pesquisa.</p></div>
+ <div class="codexItem"><b>Como jogar</b><p>Caminhe pelo mundo químico, aproxime-se dos equipamentos e toque em USAR. Cada estação tem duas perguntas e explicações.</p></div>
+ <div class="codexItem"><b>Computador</b><p><b>W, A, S, D</b> ou setas: mover · <b>Mouse</b>: girar a câmera horizontalmente · <b>E</b>: interagir · <b>Esc</b>: pausar.</p></div>
+ <div class="codexItem"><b>Celular</b><p>Use as setas na tela para andar. Deslize para a esquerda ou direita sobre o cenário para girar a câmera em 360° (a inclinação fica fixa). Toque em <b>E · USAR</b> para interagir.</p></div>
+ <p class="copy" style="font-size:12px">Conclua as quatro estações e ative a câmara de eletrólise para finalizar a missão. Vermelho = pendente; verde = concluída.</p>
+ <button id="rulesClose">COMEÇAR JOGO</button>
+ </div></div>
+
+<div id="quizOverlay" class="overlay"><div class="dialog" id="quizDialog">
+ <div class="kicker" id="quizStation">ESTAÇÃO</div><div class="qmeta" id="qmeta">DESAFIO 1/2</div><div class="qtext" id="qtext"></div>
+ <div id="choices"></div><div id="explain"></div><button id="quizNext" style="display:none">CONTINUAR</button><button class="secondary" id="quizExit">SAIR DA ESTAÇÃO</button>
+ </div></div>
+<div id="pauseOverlay" class="overlay"><div class="dialog" style="max-width:420px;text-align:center"><div class="kicker">PAUSA</div><h2>Respire. A missão espera.</h2><p class="copy">Seu progresso nesta sessão está preservado.</p><button id="resume">CONTINUAR</button><button class="secondary" id="restart">RECOMEÇAR</button></div></div>
+<div id="finishOverlay" class="overlay"><div class="dialog"><div class="kicker">SISTEMA RESTAURADO</div><h1>Você salvou<br><span>Eletroverse!</span></h1><p class="copy" id="finalCopy">As quatro estações foram concluídas.</p><button id="finishAgain">JOGAR NOVAMENTE</button></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+if(!window.THREE){$('intro').querySelector('.copy').textContent='Não foi possível carregar o motor 3D. Verifique sua conexão e atualize a página.';return;}
+const THREE=window.THREE;
+let scene,camera,renderer,clock,player,bot,worldReady=false,started=false,paused=true,quizOpen=false,locked=false;
+let yaw=0,score=0,charge=100,nearby=null,current=null,qIndex=0,answered=false,soundOn=true,audioCtx=null;
+// Câmera em terceira pessoa: altura, distância e inclinação fixas; apenas o giro horizontal varia.
+const CAMERA_DISTANCE=14;
+const CAMERA_HEIGHT=8.5;
+const CAMERA_TARGET_HEIGHT=1.6;
+const electrolysisBubbles=[];
+const keys={w:false,a:false,s:false,d:false,shift:false};
+const stationData=[
+{id:'ions',name:'PORTAL DOS ÍONS',short:'ÍONS',color:0x42dcff,pos:[-15,0,-11],desc:'Descubra por que alguns átomos ganham ou perdem elétrons.',qs:[
+['Um átomo perdeu elétrons. Que tipo de íon ele formou?',['Cátion, com carga positiva','Ânion, com carga negativa','Molécula neutra'],0,'Perder elétrons deixa o átomo com mais prótons do que elétrons. Por isso, sua carga fica positiva: é um cátion.'],
+['Um átomo ganhou dois elétrons. O que aconteceu com sua carga?',['Ficou positiva','Ficou negativa','Não mudou'],1,'Elétrons têm carga negativa. Ao ganhar elétrons, o átomo se torna um ânion.']
+]},
+{id:'redox',name:'FORJA REDOX',short:'REDOX',color:0xffa64c,pos:[0,0,-17],desc:'Investigue a troca de elétrons nas reações químicas.',qs:[
+['Oxidação é o processo em que uma espécie química...',['Ganha elétrons','Perde elétrons','Ganha nêutrons'],1,'Oxidação é perda de elétrons. Redução é ganho de elétrons. Os dois processos acontecem juntos.'],
+['Quando uma espécie ganha elétrons, ela sofre...',['Redução','Oxidação','Combustão'],0,'Redução é ganho de elétrons. Uma dica: redução e ganho de elétrons acontecem juntos.']
+]},
+{id:'battery',name:'USINA DAS PILHAS',short:'PILHAS',color:0xb18aff,pos:[15,0,-11],desc:'Restaure a pilha e transforme energia química em elétrica.',qs:[
+['Qual transformação de energia ocorre em uma pilha comum?',['Elétrica em química','Química em elétrica','Luminosa em térmica'],1,'A reação química espontânea movimenta elétrons pelo circuito, fornecendo energia elétrica.'],
+['Em uma pilha, onde ocorre a oxidação?',['No ânodo','No cátodo','Na ponte salina'],0,'A oxidação ocorre no ânodo e a redução ocorre no cátodo. Guarde: ânodo = oxidação.']
+]},
+{id:'electrolysis',name:'CÂMARA DE ELETRÓLISE',short:'ELETRÓLISE',color:0x73ffb2,pos:[0,0,18],desc:'Use energia elétrica para provocar uma transformação química.',qs:[
+['O que define a eletrólise?',['Usa corrente elétrica para provocar uma reação química','Produz eletricidade a partir de uma pilha','É apenas a mistura de duas soluções'],0,'Na eletrólise, uma fonte externa fornece energia elétrica para forçar uma reação não espontânea.'],
+['Na eletrólise, a energia é convertida principalmente de...',['Química em elétrica','Elétrica em química','Sonora em luminosa'],1,'A eletrólise utiliza energia elétrica para promover uma transformação química.']
+]}
+];
+const materials={};
+function mat(c,r=.55,m=0,e=0){return new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m,emissive:c,emissiveIntensity:e});}
+function addMesh(g,m,x,y,z,parent=scene){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
+function cube(w,h,d,m,x,y,z,parent=scene){return addMesh(new THREE.BoxGeometry(w,h,d),m,x,y,z,parent);}
+function cyl(rt,rb,h,m,x,y,z,parent=scene,seg=24){return addMesh(new THREE.CylinderGeometry(rt,rb,h,seg),m,x,y,z,parent);}
+function glowRing(radius,tube,color,x,y,z,parent=scene){const o=addMesh(new THREE.TorusGeometry(radius,tube,10,64),new THREE.MeshBasicMaterial({color}),x,y,z,parent);o.rotation.x=Math.PI/2;return o;}
+function makeTextSprite(text,color='#b8f8ff'){
+ const c=document.createElement('canvas'),ctx=c.getContext('2d');c.width=768;c.height=160;
+ ctx.fillStyle='rgba(3,12,25,.88)';ctx.beginPath();ctx.roundRect(5,5,758,150,20);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=5;ctx.stroke();
+ ctx.font='bold 43px Arial';ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(text,384,98);
+ const tex=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));s.scale.set(6.2,1.3,1);return s;
+}
+function makePlayer(){
+ player=new THREE.Group();
+ const coat=mat(0xe8f4ed,.48,.08,.08),coatShade=mat(0xb8d4d0,.5,.05),
+       dark=mat(0x18313a,.45,.12),glass=mat(0x8fe8df,.18,.18,.55),
+       lens=mat(0x45d9ee,.12,.35,.8),glove=mat(0x42a89d,.35,.08),
+       gold=mat(0xffc857,.3,.25,.35),shoe=mat(0x233f49,.4,.1);
+ // jaleco e gola
+ cube(.88,1.02,.48,coat,0,1.35,0,player);
+ cube(.22,.82,.045,coatShade,-.12,1.36,.255,player);
+ cube(.22,.82,.045,coatShade,.12,1.36,.255,player);
+ cube(.16,.32,.07,glass,0,1.45,.29,player);
+ // cabeça, cabelo e óculos de proteção
+ const head=addMesh(new THREE.SphereGeometry(.36,20,18),mat(0xd8b69a,.8),0,2.18,0,player);
+ cube(.74,.13,.16,dark,0,2.49,0,player);
+ cube(.34,.18,.09,lens,-.18,2.25,.31,player);
+ cube(.34,.18,.09,lens,.18,2.25,.31,player);
+ cube(.12,.055,.08,dark,0,2.25,.34,player);
+ // símbolo de molécula no peito
+ const atomA=addMesh(new THREE.SphereGeometry(.095,14,14),gold,-.2,1.48,.29,player);
+ const atomB=addMesh(new THREE.SphereGeometry(.095,14,14),lens,.2,1.48,.29,player);
+ const atomC=addMesh(new THREE.SphereGeometry(.095,14,14),glove,0,1.68,.29,player);
+ cube(.38,.035,.035,coatShade,0,1.48,.29,player);
+ // crachá e mochila com bateria e pequeno frasco de solução
+ cube(.22,.22,.045,mat(0x245d65),.28,1.78,.29,player);
+ cube(.48,.68,.3,dark,0,1.35,-.36,player);
+ cube(.28,.38,.1,gold,0,1.4,-.55,player);
+ cyl(.13,.13,.42,glass,.0,1.72,-.58,player);
+ cyl(.09,.09,.04,mat(0x65d8e6,.2,.15,.4),0,1.95,-.58,player);
+ const armL=cube(.24,.72,.28,coat,-.57,1.4,0,player),armR=cube(.24,.72,.28,coat,.57,1.4,0,player);
+ const handL=addMesh(new THREE.SphereGeometry(.15,12,12),glove,-.58,1.0,.04,player);
+ const handR=addMesh(new THREE.SphereGeometry(.15,12,12),glove,.58,1.0,.04,player);
+ const legL=cube(.3,.7,.32,dark,-.22,.55,0,player),legR=cube(.3,.7,.32,dark,.22,.55,0,player);
+ const bootL=cube(.36,.2,.45,shoe,-.22,.13,.05,player),bootR=cube(.36,.2,.45,shoe,.22,.13,.05,player);
+ player.userData.parts={armL,armR,legL,legR,bootL,bootR,torso:player.children[0],handL,handR};
+ player.position.set(0,0,5);scene.add(player);
+}
+function makeBot(){
+ bot=new THREE.Group();const body=mat(0xf1f7ff,.3,.25),blue=mat(0x29c8ee,.3,.3,.3),black=mat(0x071c30);
+ cube(.85,.72,.65,body,0,.85,0,bot);cube(.8,.55,.62,body,0,1.55,0,bot);cube(.58,.2,.06,blue,0,1.57,.33,bot);
+ [-.2,.2].forEach(x=>cyl(.055,.055,.07,black,x,1.62,.38,bot));
+ cyl(.12,.12,.16,blue,0,2,.02,bot);bot.position.set(3,0,4);scene.add(bot);
+ const core=addMesh(new THREE.SphereGeometry(.22,18,18),mat(0x6deeff,.2,.2,1),0,1.25,.48,bot);
+ const orbit1=addMesh(new THREE.TorusGeometry(.68,.035,8,48),new THREE.MeshBasicMaterial({color:0x56eaff}),0,1.25,.2,bot);orbit1.rotation.x=.9;
+ const orbit2=addMesh(new THREE.TorusGeometry(.68,.035,8,48),new THREE.MeshBasicMaterial({color:0xffc857}),0,1.25,.2,bot);orbit2.rotation.y=1.1;
+ const electron=addMesh(new THREE.SphereGeometry(.09,12,12),mat(0x55eaff,.2,.2,.9),.65,1.25,.2,bot);
+ bot.userData.orbits=[orbit1,orbit2,electron];
+ const name=makeTextSprite('NEO • ROBÔ ATÔMICO','#9ff4ff');name.position.set(3,3,4);name.scale.set(3.6,.75,1);bot.add(name);
+}
+function makeTree(x,z,s=1){
+ // Estruturas decorativas em forma de átomo, no lugar de árvores comuns.
+ const stem=cyl(.09,.12,1.25*s,mat(0x287a91,.45,.35,.25),x,.62*s,z);
+ const nucleus=addMesh(new THREE.SphereGeometry(.34*s,18,18),mat(0x39c9e8,.25,.3,.65),x,1.35*s,z);
+ const orbitA=addMesh(new THREE.TorusGeometry(.82*s,.045*s,8,40),new THREE.MeshBasicMaterial({color:0x52eaff}),x,1.35*s,z);
+ orbitA.rotation.set(.8,.25,.4);
+ const orbitB=addMesh(new THREE.TorusGeometry(.82*s,.04*s,8,40),new THREE.MeshBasicMaterial({color:0xffc85c}),x,1.35*s,z);
+ orbitB.rotation.set(1.35,.8,0);
+ for(let j=0;j<3;j++){
+   const a=j*Math.PI*2/3;
+   addMesh(new THREE.SphereGeometry(.11*s,12,12),mat(0xffd36b,.2,.2,.7),x+Math.cos(a)*.82*s,1.35*s+Math.sin(a)*.82*s,z);
+ }
+}
+function makeCrystal(x,z,c){
+ const group=new THREE.Group();const m=mat(c,.25,.25,.45);
+ for(let i=0;i<3;i++){const cr=addMesh(new THREE.OctahedronGeometry(.6+Math.random()*.5),m,(i-1)*.55,.65+(i%2)*.35,0,group);cr.rotation.z=(i-1)*.2;}
+ group.position.set(x,0,z);scene.add(group);return group;
+}
+function stationBuild(s){
+ const [x,,z]=s.pos,c=s.color;
+ const platformRadius=s.id==='electrolysis'?4.8:3.1;
+ // Vermelho indica estação pendente; verde será aplicado ao concluir os desafios.
+ const pendingColor=0xff4b5b, completedColor=0x55ef91;
+ const platformMat=mat(0x3c202b,.5,.3);
+ const platform=cyl(platformRadius,platformRadius+.3,.55,platformMat,x,.2,z,scene,48);
+ const platformRing=glowRing(platformRadius+.15,.08,pendingColor,x,.5,z);
+ // Coluna de reação com anéis de status.
+ cyl(.72,.95,1.5,mat(0x102d43,.25,.55),x,1.15,z);
+ const baseRing=glowRing(1.05,.045,pendingColor,x,1.0,z);baseRing.rotation.x=Math.PI/2;
+ const topRing=glowRing(.9,.035,pendingColor,x,2.0,z);topRing.rotation.x=Math.PI/2;
+ const orbMat=new THREE.MeshStandardMaterial({color:pendingColor,emissive:pendingColor,emissiveIntensity:.9,metalness:.25,roughness:.2});
+ const orb=addMesh(new THREE.IcosahedronGeometry(s.id==='electrolysis'?1.15:.95,2),orbMat,x,s.id==='electrolysis'?4.9:2.55,z);
+ orb.userData.float=true;
+ const ring=glowRing(1.5,.055,pendingColor,x,2.55,z);ring.rotation.z=.5;
+ const pendingLabel=makeTextSprite('PENDENTE • NÃO CONCLUÍDA','#ff8790');
+ pendingLabel.position.set(x,s.id==='electrolysis'?7.25:5.2,z);pendingLabel.scale.set(4.8,.82,1);
+ pendingLabel.userData.baseScale=pendingLabel.scale.clone();scene.add(pendingLabel);
+ const doneLabel=makeTextSprite('CONCLUÍDA • SETOR ATIVADO','#8affb5');
+ doneLabel.position.copy(pendingLabel.position);doneLabel.visible=false;doneLabel.scale.copy(pendingLabel.scale);
+ doneLabel.userData.baseScale=doneLabel.scale.clone();scene.add(doneLabel);
+ for(let i=0;i<4;i++){const a=i*Math.PI/2;const p=cube(.42,1.1,.42,mat(0x264a62,.3,.4),x+Math.cos(a)*2.15,.8,z+Math.sin(a)*2.15);p.rotation.y=-a;}
+ if(s.id==='battery'){
+  // two half-cell vessels and connecting bridge
+  [-.95,.95].forEach((dx,i)=>{cyl(.58,.58,1.25,mat(i?0x9aaec1:0xd68b3e,.25,.3,.1),x+dx,1.1,z+1.05);cyl(.48,.48,.12,mat(i?0x69baff:0xf3b75b,.2,.2,.3),x+dx,1.76,z+1.05);});
+  cube(2.2,.12,.14,mat(0x8beaff,.2,.7,.3),x,2.3,z+1.05);
+ }else if(s.id==='electrolysis'){
+  // Cuba transparente com solução azul-esverdeada
+  const glassMat=new THREE.MeshPhysicalMaterial({color:0x9debe8,transparent:true,opacity:.22,roughness:.08,metalness:.05});
+  const solutionMat=new THREE.MeshStandardMaterial({color:0x18b9c1,transparent:true,opacity:.72,roughness:.18,emissive:0x087e83,emissiveIntensity:.28});
+  const tank=cube(3.6,2.25,1.65,glassMat,x,1.45,z+1.25);
+  cube(3.25,1.05,1.38,solutionMat,x,.98,z+1.25);
+  // bordas de vidro e tampa
+  [[-1.82,0],[1.82,0]].forEach(([dx])=>cube(.08,2.35,1.72,mat(0xb6f7f1,.12,.2,.45),x+dx,1.48,z+1.25));
+  cube(3.72,.12,1.78,mat(0xc5f5ef,.12,.25,.45),x,2.62,z+1.25);
+  // eletrodos: ânodo (+) e cátodo (-)
+  const anode=cube(.14,1.75,.16,mat(0xffa34f,.2,.78,.45),x-.72,1.75,z+1.25);
+  const cathode=cube(.14,1.75,.16,mat(0x63dfff,.18,.82,.55),x+.72,1.75,z+1.25);
+  cube(.48,.16,.18,mat(0xffbd75,.2,.55,.4),x-.72,2.78,z+1.25);
+  cube(.48,.16,.18,mat(0x82eaff,.2,.55,.4),x+.72,2.78,z+1.25);
+  // fonte externa e cabos coloridos
+  cube(1.25,.72,.62,mat(0x203c4b,.35,.5),x,3.35,z+2.5);
+  cube(.72,.2,.08,mat(0x0b1d27),x,3.43,z+2.84);
+  const display=makeTextSprite('FONTE CC  •  + / −','#aaf8e8');display.position.set(x,4.2,z+2.5);display.scale.set(3.2,.68,1);display.userData.baseScale=display.scale.clone();scene.add(display);
+  const electrolysisSmallLabels=[display];
+  const wire1=cube(.07,.07,1.2,mat(0xffa34f,.2,.65,.5),x-.72,2.95,z+1.85);wire1.rotation.x=.25;
+  const wire2=cube(.07,.07,1.2,mat(0x63dfff,.2,.65,.5),x+.72,2.95,z+1.85);wire2.rotation.x=.25;
+  // rótulos visuais dos polos e dos gases
+  const plusLabel=makeTextSprite('ÂNODO (+)  •  O₂','#ffc18a');plusLabel.position.set(x-2.3,3.05,z+1.25);plusLabel.scale.set(2.5,.55,1);plusLabel.userData.baseScale=plusLabel.scale.clone();scene.add(plusLabel);
+  const minusLabel=makeTextSprite('CÁTODO (−)  •  H₂','#9ceaff');minusLabel.position.set(x+2.3,3.05,z+1.25);minusLabel.scale.set(2.5,.55,1);minusLabel.userData.baseScale=minusLabel.scale.clone();scene.add(minusLabel);
+  electrolysisSmallLabels.push(plusLabel,minusLabel);
+  s.proximityLabels=electrolysisSmallLabels;
+  // bolhas que representam os gases formados nos eletrodos
+  for(let i=0;i<18;i++){
+    const side=i%2===0?-1:1, bx=x+side*.72+(Math.random()-.5)*.18;
+    const bubble=addMesh(new THREE.SphereGeometry(.055+Math.random()*.045,10,10),
+      new THREE.MeshBasicMaterial({color:side<0?0xffc28b:0x9beeff,transparent:true,opacity:.8}),
+      bx,.55+Math.random()*1.35,z+1.25+(Math.random()-.5)*.22);
+    bubble.userData={bubble:true,baseX:bx,baseZ:z+1.25,side};
+    electrolysisBubbles.push(bubble);
+  }
+ }else if(s.id==='electrolyte'){
+  for(let i=-1;i<=1;i++){cyl(.38,.38,1.15,mat(0x75cdeb,.2,.1,.2),x+i*.9,1,z+1.1);cyl(.31,.31,.05,mat(0xffd35e,.2,.1,.4),x+i*.9,1.62,z+1.1);}
+ }else if(s.id==='redox'){
+  for(let i=0;i<7;i++){const a=i*Math.PI*2/7;const p=addMesh(new THREE.SphereGeometry(.22,16,16),mat(i%2?0xff785f:0x53e6ff,.3,0,.4),x+Math.cos(a)*1.45,1.2,z+Math.sin(a)*1.45);}
+ }else{
+  for(let i=0;i<6;i++){const a=i*Math.PI/3;addMesh(new THREE.SphereGeometry(.22,16,16),mat(i%2?0x5beaff:0xffd35e,.3,0,.5),x+Math.cos(a)*1.45,1.2,z+Math.sin(a)*1.45);}
+ }
+ const label=makeTextSprite(s.name,'#d7fbff');
+ label.position.set(x,s.id==='electrolysis'?6.5:4.5,z);
+ label.userData.baseScale=label.scale.clone();
+ scene.add(label);
+ const beam=addMesh(new THREE.CylinderGeometry(.04,.7,5,24,1,true),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.09,side:THREE.DoubleSide}),x,2.8,z);beam.userData.beam=true;
+ s.orb=orb;s.ring=ring;s.beam=beam;
+ s.label=label;s.pendingLabel=pendingLabel;s.doneLabel=doneLabel;
+ s.visual={platformMat,platformRing,baseRing,topRing,orbMat,ringMat:ring.material,pendingLabel,doneLabel,pendingColor,completedColor};
+ s.done=!!s.done;
+ updateStationVisual(s);
+}
+function updateStationVisual(s){
+ if(!s.visual)return;
+ const v=s.visual,color=s.done?v.completedColor:v.pendingColor;
+ v.platformMat.color.setHex(s.done?0x174a36:0x3c202b);
+ [v.platformRing.material,v.baseRing.material,v.topRing.material,v.ringMat].forEach(m=>m.color.setHex(color));
+ v.orbMat.color.setHex(color);v.orbMat.emissive.setHex(color);
+ if(s.beam)s.beam.material.color.setHex(color);
+ v.pendingLabel.visible=!s.done;v.doneLabel.visible=!!s.done;
+}
+function initWorld(){
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x071526);scene.fog=new THREE.FogExp2(0x071526,.009);
+ camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
+ renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;$('game').appendChild(renderer.domElement);
+ clock=new THREE.Clock();
+ scene.add(new THREE.HemisphereLight(0x9edfff,0x102039,1.25));
+ const key=new THREE.DirectionalLight(0xffedcf,1.65);key.position.set(-22,32,12);key.castShadow=true;key.shadow.mapSize.set(2048,2048);key.shadow.camera.left=-40;key.shadow.camera.right=40;key.shadow.camera.top=40;key.shadow.camera.bottom=-40;scene.add(key);
+ const moon=new THREE.PointLight(0x1b9dff,2,65);moon.position.set(0,14,0);scene.add(moon);
+ // Mundo-laboratório: plataforma mineral, piso de vidro e circuitos químicos
+ const island=cyl(32,35,3.2,mat(0x173b3c,.95),0,-2,0,scene,80);
+ const ground=addMesh(new THREE.CylinderGeometry(29,31,.35,80),mat(0x164b4b,.72,.25),0,-.25,0);ground.receiveShadow=true;
+ // Grandes anéis de laboratório e marcadores de bancada
+ const labHalo=glowRing(18,.12,0x4bc7b5,0,.02,0);labHalo.rotation.x=Math.PI/2;
+ for(let i=0;i<12;i++){
+   const a=i*Math.PI/6,xx=Math.cos(a)*18,zz=Math.sin(a)*18;
+   cyl(.18,.18,.12,mat(0x9de7d5,.25,.35,.3),xx,.12,zz,scene,16);
+ }
+ // terrain patches and walkable paths
+ const path=mat(0x102d46,.48,.55),edge=mat(0x4ad7e9,.25,.4,.65);
+ const hub=cyl(5.2,5.5,.25,mat(0x163c56,.4,.4),0,.02,0,scene,64);glowRing(5.4,.09,0x46eaff,0,.2,0);
+ [[0,-9,3,20],[0,9,3,20],[-9,0,20,3],[9,0,20,3],[-9,-9,10,2],[9,-9,10,2],[-9,9,10,2],[9,9,10,2]].forEach(([x,z,w,d])=>{cube(w,.1,d,path,x,-.02,z);});
+ // walkways neon side markers
+ for(let n=-8;n<=8;n+=2){[-1,1].forEach(side=>{cube(.08,.08,.35,edge,side*1.65,-.005,n);cube(.35,.08,.08,edge,n,-.005,side*1.65);});}
+ // island perimeter
+ glowRing(29,.12,0x1c819e,0,-.15,0);
+ // Trilhas luminosas lembram placas de circuito e conduzem aos setores.
+ for(let i=-2;i<=2;i++){
+   const line=cube(.045,.035,23,mat(0x2a9eb0,.25,.4,.65),i*1.2,.035,0);
+   line.material.transparent=true;line.material.opacity=.5;
+ }
+ // Pequenos símbolos de moléculas no piso do laboratório.
+ function floorMolecule(x,z,color){
+   const m=mat(color,.25,.25,.55);
+   const a=addMesh(new THREE.SphereGeometry(.22,14,14),m,x,.12,z);
+   const b=addMesh(new THREE.SphereGeometry(.16,14,14),m,x+.55,.12,z+.25);
+   const link=cube(.62,.055,.055,mat(0xa8eaff,.25,.3,.35),x+.28,.12,z+.12);
+   link.rotation.y=-.42;
+ }
+ floorMolecule(-5,-5,0x54dfff);floorMolecule(5,-5,0xffc45b);
+ floorMolecule(-5,5,0x82ffbd);floorMolecule(5,5,0xb49aff);
+ for(let i=0;i<70;i++){const a=Math.random()*Math.PI*2,r=23+Math.random()*6,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.random()<.58)makeCrystal(x,z,Math.random()<.5?0x35b9b0:0x7cc9d6);else makeTree(x,z,.65+Math.random()*.65);}
+ // Balizas em formato de tubos de ensaio e frascos de reagente
+ for(let i=0;i<10;i++){
+   const a=i*Math.PI/5, x=Math.cos(a)*20, z=Math.sin(a)*20;
+   cyl(.28,.34,1.4,mat(0x9be6dc,.18,.12,.3),x,.78,z,scene,20);
+   cyl(.22,.22,.72,mat(i%2?0x34b8ca:0x8bdc9e,.2,.08,.4),x,.65,z,scene,20);
+   cyl(.16,.16,.16,mat(0xdaf8ed,.2,.15,.3),x,1.58,z,scene,20);
+ }
+ // floating rocks / sky crystals
+ for(let i=0;i<24;i++){let a=Math.random()*Math.PI*2,r=33+Math.random()*23;const rock=addMesh(new THREE.DodecahedronGeometry(.6+Math.random()*1.2),mat(0x27445f,.85),Math.cos(a)*r,4+Math.random()*13,Math.sin(a)*r);rock.rotation.set(Math.random(),Math.random(),Math.random());}
+ // stars
+ const starPos=[];for(let i=0;i<1100;i++)starPos.push((Math.random()-.5)*180,Math.random()*75+8,(Math.random()-.5)*180);
+ const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPos,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9eeaff,size:.13,transparent:true,opacity:.8})));
+ // Escultura molecular gigante no horizonte
+ const molecule=new THREE.Group();
+ const nuc1=addMesh(new THREE.SphereGeometry(2.2,24,20),mat(0x2bb9a9,.25,.25,.55),-48,32,-65,molecule);
+ const nuc2=addMesh(new THREE.SphereGeometry(1.55,24,20),mat(0xffc45b,.25,.2,.55),-43,35,-65,molecule);
+ const nuc3=addMesh(new THREE.SphereGeometry(1.7,24,20),mat(0x66cfff,.25,.2,.55),-52,36,-65,molecule);
+ const bond1=cube(5,.28,.28,mat(0xb5eee4,.2,.35,.5),-45.5,33.5,-65,molecule);bond1.rotation.z=.55;
+ const bond2=cube(5,.28,.28,mat(0xb5eee4,.2,.35,.5),-50,34,-65,molecule);bond2.rotation.z=-.45;
+ stationData.forEach(stationBuild);makePlayer();makeBot();
+ // energy core at island centre
+ const core=cyl(1.1,1.4,2.4,mat(0x123c55,.25,.65),0,1.2,0);glowRing(1.8,.08,0x50eaff,0,2.1,0);glowRing(2.25,.045,0xffc857,0,2.1,0);
+ const coreOrb=addMesh(new THREE.IcosahedronGeometry(.72,2),new THREE.MeshStandardMaterial({color:0x54eaff,emissive:0x28cfff,emissiveIntensity:1.5}),0,2.9,0);coreOrb.userData.core=true;
+ worldReady=true;resize();drawMap();
+}
+function resize(){if(!camera||!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
+function toast(msg){$('toast').textContent=msg;$('toast').style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').style.opacity=0,2600);}
+function setMission(title,text){$('missionTitle').textContent=title;$('missionText').textContent=text;$('progressFill').style.width=(stationData.filter(s=>s.done).length/stationData.length*100)+'%';}
+function playTone(freq=440,duration=.12){if(!soundOn)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type='sine';osc.frequency.value=freq;gain.gain.setValueAtTime(.045,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration);}catch(e){}}
+function isTouchPlay(){
+ return (window.matchMedia&&window.matchMedia('(pointer: coarse)').matches) || innerWidth<760;
+}
+function refreshTouchControls(){
+ const show=isTouchPlay()&&started;
+ $('touch').style.display=show?'block':'none';
+ $('touchAct').style.display=show?'block':'none';
+ if(camera){
+   camera.fov=innerHeight>innerWidth?66:60;
+   camera.updateProjectionMatrix();
+ }
+}
+function startGame(){if(!worldReady)initWorld();$('intro').style.display='none';started=true;paused=false;clock.start();toast('Bem-vindo ao mundo da eletroquímica! Encontre os equipamentos do laboratório.');playTone(660);refreshTouchControls();}
+$('play').onclick=()=>{$('rulesOverlay').style.display='flex';};
+$('rulesClose').onclick=()=>{$('rulesOverlay').style.display='none';startGame();};
+function setKey(k,v){if(k==='arrowup')k='w';if(k==='arrowdown')k='s';if(k==='arrowleft')k='a';if(k==='arrowright')k='d';if(k in keys)keys[k]=v;}
+document.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();setKey(k,true);if(k==='e'&&nearby&&!quizOpen&&!paused)openStation(nearby);if(k==='escape'&&started&&!quizOpen){togglePause();}if(k==='shift')keys.shift=true;});
+document.addEventListener('keyup',e=>{setKey(e.key.toLowerCase(),false);if(e.key==='Shift')keys.shift=false;});
+// Impede que um toque prolongado nos botões móveis abra seleção/copiar/colar.
+['contextmenu','selectstart','dragstart'].forEach(type=>{
+ document.addEventListener(type,e=>{
+   if(e.target.closest && e.target.closest('#touch, #touchAct')) e.preventDefault();
+ },{passive:false});
+});
+document.querySelectorAll('#touch button, #touchAct').forEach(el=>{
+ el.addEventListener('contextmenu',e=>e.preventDefault());
+ el.addEventListener('selectstart',e=>e.preventDefault());
+ el.addEventListener('dragstart',e=>e.preventDefault());
+});
+document.querySelectorAll('#touch [data-key]').forEach(b=>{
+ const k=b.dataset.key;
+ b.addEventListener('pointerdown',e=>{
+   e.preventDefault();setKey(k,true);
+   try{b.setPointerCapture(e.pointerId);}catch(err){}
+ });
+ const release=()=>setKey(k,false);
+ ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,release));
+});
+$('touchAct').addEventListener('pointerdown',e=>{e.preventDefault();if(nearby&&!quizOpen&&!paused)openStation(nearby);});
+let dragging=false,lastX=0,lastY=0;
+rendererPointerSetup();
+function rendererPointerSetup(){document.addEventListener('mousemove',e=>{if(!locked||paused||quizOpen)return;yaw-=e.movementX*.0007;});
+ document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===renderer?.domElement;});
+ document.addEventListener('mousedown',e=>{if(started&&!paused&&!quizOpen&&innerWidth>700&&e.target.tagName==='CANVAS')renderer.domElement.requestPointerLock?.();});
+ // Câmera por Pointer Events: cada dedo tem seu próprio ponteiro.
+ // Um dedo pode mover o personagem nos botões enquanto outro gira a câmera.
+ const cameraPointers = new Map();
+ const getCanvas = () => renderer && renderer.domElement;
+ document.addEventListener('pointerdown',e=>{
+   if(!started || paused || quizOpen || e.pointerType!=='touch') return;
+   const c=getCanvas();
+   if(!c || e.target!==c) return;
+   cameraPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   try{c.setPointerCapture(e.pointerId);}catch(err){}
+   e.preventDefault();
+ },{passive:false});
+ document.addEventListener('pointermove',e=>{
+   const p=cameraPointers.get(e.pointerId);
+   if(!p || paused || quizOpen) return;
+   const dx=e.clientX-p.x,dy=e.clientY-p.y;
+   yaw-=dx*.0007;
+   pitch=Math.max(-.85,Math.min(.75,pitch-dy*.006));
+   p.x=e.clientX;p.y=e.clientY;
+   e.preventDefault();
+ },{passive:false});
+ function releaseCameraPointer(e){cameraPointers.delete(e.pointerId);}
+ document.addEventListener('pointerup',releaseCameraPointer);
+ document.addEventListener('pointercancel',releaseCameraPointer);
+ document.addEventListener('lostpointercapture',releaseCameraPointer);
+}
+function openStation(s){current=s;qIndex=0;quizOpen=true;paused=true;$('quizOverlay').style.display='flex';$('quizStation').textContent=s.name;$('quizExit').style.display='inline-block';showQuestion();document.exitPointerLock?.();playTone(520);}
+function showQuestion(){
+ const q=current.qs[qIndex];answered=false;$('qmeta').textContent='DESAFIO '+(qIndex+1)+' / '+current.qs.length;$('qtext').textContent=q[0];$('explain').textContent='';$('quizNext').style.display='none';$('choices').innerHTML='';
+ q[1].forEach((choice,i)=>{const b=document.createElement('button');b.textContent=String.fromCharCode(65+i)+') '+choice;b.onclick=()=>answer(i);$('choices').appendChild(b);});
+}
+function answer(i){
+ if(answered)return;answered=true;const q=current.qs[qIndex],correct=i===q[2];[...$('choices').children].forEach((b,n)=>{b.disabled=true;if(n===q[2]){b.style.borderColor='#75ffb2';b.style.background='#124735';}else if(n===i&&!correct){b.style.borderColor='#ff9b83';}});
+ if(correct){score+=100;charge=Math.min(100,charge+5);$('explain').style.color='#8dffbd';$('explain').textContent='✓ Excelente! '+q[3];playTone(780,.18);}
+ else{$('explain').style.color='#ffd36b';$('explain').textContent='Vamos aprender: '+q[3];playTone(240,.2);}
+ $('points').textContent=score;$('charge').textContent=charge+'%';
+ $('quizNext').style.display='inline-block';$('quizNext').textContent=qIndex<current.qs.length-1?'PRÓXIMO DESAFIO':'CONCLUIR ESTA ESTAÇÃO';
+}
+$('quizNext').onclick=()=>{
+ if(!answered)return;
+ if(qIndex<current.qs.length-1){qIndex++;showQuestion();return;}
+ current.done=true;updateStationVisual(current);const count=stationData.filter(s=>s.done).length;charge=Math.max(20,100-count*16);$('stations').textContent=count+'/'+stationData.length;$('charge').textContent=charge+'%';$('progressFill').style.width=count/stationData.length*100+'%';
+ $('quizOverlay').style.display='none';quizOpen=false;paused=false;current=null;
+ if(count===stationData.length){finishGame();}else{setMission('Setor reativado!',`Você concluiu ${count} de 4 estações. Encontre a próxima.`);toast('Setor reativado! + energia restaurada.');playTone(880,.25);}
+};
+$('quizExit').onclick=()=>{$('quizOverlay').style.display='none';quizOpen=false;paused=false;current=null;};
+function togglePause(){if(!started)return;paused=!paused;$('pauseOverlay').style.display=paused?'flex':'none';if(paused)document.exitPointerLock?.();}
+$('pauseBtn').onclick=togglePause;$('resume').onclick=()=>{paused=false;$('pauseOverlay').style.display='none';};
+$('restart').onclick=()=>location.reload();
+
+function finishGame(){paused=true;$('finishOverlay').style.display='flex';$('finalCopy').textContent=`Você concluiu as quatro estações e conquistou ${score} pontos. Investigou íons, oxirredução e pilhas e ativou a câmara de eletrólise, observando a formação de gases nos eletrodos.`;playTone(990,.4);}
+$('finishAgain').onclick=()=>location.reload();
+function drawMap(){const c=$('mapCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,252,252);ctx.fillStyle='#07192b';ctx.fillRect(0,0,252,252);ctx.strokeStyle='#2d6077';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(126,126);ctx.lineTo(126,30);ctx.moveTo(126,126);ctx.lineTo(30,126);ctx.moveTo(126,126);ctx.lineTo(222,126);ctx.moveTo(126,126);ctx.lineTo(126,222);ctx.stroke();ctx.fillStyle='#23516a';ctx.beginPath();ctx.arc(126,126,17,0,Math.PI*2);ctx.fill();stationData.forEach(s=>{let x=126+s.pos[0]*5.2,z=126+s.pos[2]*5.2;ctx.fillStyle=s.done?'#55ef91':'#ff4b5b';ctx.beginPath();ctx.arc(x,z,7,0,Math.PI*2);ctx.fill();});}
+function updateMap(){const c=$('mapCanvas'),ctx=c.getContext('2d');drawMap();let x=126+player.position.x*5.2,z=126+player.position.z*5.2;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,z,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,z);ctx.lineTo(x-Math.sin(yaw)*12,z-Math.cos(yaw)*12);ctx.stroke();}
+function update(dt,t){
+ if(!player)return;
+ // Player movement: local forward is -Z. LEFT and RIGHT are now correctly mapped.
+ let forward=(keys.w?1:0)-(keys.s?1:0),strafe=(keys.d?1:0)-(keys.a?1:0);
+ const speed=keys.shift?10.5:6.2;
+ const fwd=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+ const movement=fwd.multiplyScalar(forward).add(right.multiplyScalar(strafe));
+ if(movement.lengthSq()>0){movement.normalize().multiplyScalar(speed*dt);player.position.add(movement);player.rotation.y=Math.atan2(movement.x,movement.z);player.userData.walkT=(player.userData.walkT||0)+dt*(keys.shift?13:9);}
+ const walk=player.userData.walkT||0,parts=player.userData.parts,walking=movement.lengthSq()>0;
+ parts.armL.rotation.x=walking?Math.sin(walk)*.65:0;parts.armR.rotation.x=walking?-Math.sin(walk)*.65:0;parts.legL.rotation.x=walking?-Math.sin(walk)*.65:0;parts.legR.rotation.x=walking?Math.sin(walk)*.65:0;parts.torso.position.y=1.35+(walking?Math.abs(Math.sin(walk*2))*.045:0);
+ player.position.x=THREE.MathUtils.clamp(player.position.x,-27,27);player.position.z=THREE.MathUtils.clamp(player.position.z,-27,27);
+ // Câmera fixa em terceira pessoa: só gira no eixo horizontal (360°).
+ const offset=new THREE.Vector3(Math.sin(yaw)*CAMERA_DISTANCE,CAMERA_HEIGHT,Math.cos(yaw)*CAMERA_DISTANCE);
+ const target=player.position.clone().add(offset);
+ camera.position.lerp(target,1-Math.pow(.001,dt));
+ const look=player.position.clone();look.y+=CAMERA_TARGET_HEIGHT;camera.lookAt(look);
+ // bot companion
+ bot.position.x=3+Math.sin(t*.65)*.8;bot.position.z=4+Math.cos(t*.65)*.8;bot.position.y=Math.sin(t*2)*.08;bot.rotation.y=t*.5;if(bot.userData.orbits){bot.userData.orbits[0].rotation.z=t*.8;bot.userData.orbits[1].rotation.x=1.1+Math.sin(t)*.25;bot.userData.orbits[2].position.set(Math.cos(t*1.8)*.68,1.25+Math.sin(t*1.8)*.22,.2+Math.sin(t*1.8)*.35);}
+ // Núcleos das estações e bolhas subindo nos eletrodos da eletrólise
+ stationData.forEach(s=>{s.orb.rotation.y+=dt*.5;s.orb.position.y=(s.id==='electrolysis'?4.9:2.55)+Math.sin(t*1.6+s.pos[0])*.17;s.ring.rotation.z+=dt*.3;s.beam.material.opacity=.055+Math.sin(t*2+s.pos[2])*.025;});
+ electrolysisBubbles.forEach(b=>{b.position.y+=dt*(.35+Math.random()*.22);b.material.opacity=.45+Math.sin(t*5+b.position.x)*.3;if(b.position.y>2.35){b.position.y=.55;b.position.x=b.userData.baseX+(Math.random()-.5)*.16;}});
+ scene.traverse(o=>{if(o.userData.core){o.rotation.y+=dt*.6;o.position.y=2.9+Math.sin(t*1.8)*.12;}});
+ // station proximity
+ nearby=null;let best=5.2;stationData.forEach(s=>{
+  const d=Math.hypot(player.position.x-s.pos[0],player.position.z-s.pos[2]);
+  // O nome flutuante cresce suavemente quando o personagem se aproxima.
+  const proximity=THREE.MathUtils.clamp((11-d)/8,0,1);
+  const scaleFactor=1+proximity*1.15;
+  // Aumenta tanto o nome da estação quanto o status (pendente/concluída).
+  [s.label,s.pendingLabel,s.doneLabel,...(s.proximityLabels||[])].forEach(label=>{
+   if(label&&label.userData.baseScale){
+    const base=label.userData.baseScale;
+    label.scale.set(base.x*scaleFactor,base.y*scaleFactor,base.z);
+   }
+  });
+  if(d<best){best=d;nearby=s;}
+ });
+ $('interact').style.display=nearby&&!paused?'block':'none';if(nearby&&!paused)$('interactText').textContent=(nearby.done?'REVISITAR':'ATIVAR')+' — '+nearby.name;
+ updateMap();
+}
+function loop(){requestAnimationFrame(loop);if(!renderer||!worldReady)return;const dt=Math.min(clock.getDelta(),.04),t=clock.elapsedTime;if(started&&!paused)update(dt,t);else if(player){const offset=new THREE.Vector3(Math.sin(yaw)*CAMERA_DISTANCE,CAMERA_HEIGHT,Math.cos(yaw)*CAMERA_DISTANCE);camera.position.lerp(player.position.clone().add(offset),.04);camera.lookAt(player.position.x,player.position.y+CAMERA_TARGET_HEIGHT,player.position.z);}renderer.render(scene,camera);}
+$('pauseBtn').style.pointerEvents='auto';
+window.addEventListener('resize',()=>{resize();refreshTouchControls();});
+window.addEventListener('orientationchange',()=>setTimeout(()=>{resize();refreshTouchControls();},180));
+const originalStart=$('play').onclick;$('play').onclick=()=>{originalStart();if(!window.loopStarted){window.loopStarted=true;loop();}};
+})();
+</script>
+</body>
+</html>
